@@ -1,9 +1,11 @@
--- lua/logbook/utils.lua
 local config = require("logbook.config")
 
 local M = {}
 
 function M.open_logbook(name)
+	-- Store current working directory
+	local current_dir = vim.fn.getcwd()
+
 	local filename
 	if name and name ~= "" then
 		filename = config.options.default_path .. "/" .. name .. config.options.file_extension
@@ -13,6 +15,8 @@ function M.open_logbook(name)
 
 	-- Create file if it doesn't exist
 	if vim.fn.filereadable(filename) == 0 then
+		-- Temporarily change directory to create the file
+		vim.cmd("lcd " .. vim.fn.fnameescape(config.options.default_path))
 		local file = io.open(filename, "w")
 		if file then
 			if config.options.template then
@@ -22,9 +26,15 @@ function M.open_logbook(name)
 			end
 			file:close()
 		end
+		-- Return to original directory
+		vim.cmd("lcd " .. vim.fn.fnameescape(current_dir))
 	end
 
+	-- Open the file in a buffer using full path
 	vim.cmd("edit " .. vim.fn.fnameescape(filename))
+
+	-- Ensure we're back in the original directory
+	vim.cmd("lcd " .. vim.fn.fnameescape(current_dir))
 end
 
 function M.insert_timestamp()
