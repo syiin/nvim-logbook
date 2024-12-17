@@ -1,4 +1,3 @@
--- lua/logbook/init.lua
 local config = require("logbook.config")
 local utils = require("logbook.utils")
 
@@ -20,10 +19,16 @@ function M.setup(opts)
 		utils.insert_timestamp()
 	end, {})
 
+	-- Add new QuickLogbook command
+	vim.api.nvim_create_user_command("QuickLogbook", function()
+		utils.quick_logbook()
+	end, {})
+
 	-- Set up default keymaps if enabled
 	if config.options.use_default_keymaps then
 		vim.keymap.set("n", "<leader>ll", ":LogbookOpen<CR>", { noremap = true, silent = true })
 		vim.keymap.set("n", "<leader>lt", ":LogbookInsertTimestamp<CR>", { noremap = true, silent = true })
+		vim.keymap.set("n", "<leader>lq", ":QuickLogbook<CR>", { noremap = true, silent = true })
 	end
 end
 

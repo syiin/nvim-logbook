@@ -1,9 +1,8 @@
--- lua/logbook/utils.lua
 local config = require("logbook.config")
 
 local M = {}
 
-function M.open_logbook(name)
+function M.quick_logbook(name)
 	-- Store current working directory
 	local current_dir = vim.fn.getcwd()
 
@@ -27,31 +26,53 @@ function M.open_logbook(name)
 			end
 			file:close()
 		end
-		-- Return to original directory
-		vim.cmd("lcd " .. vim.fn.fnameescape(current_dir))
 	end
 
-	-- Store current position in both jumplist and tagstack
+	-- Add current position to jumplist before moving
 	vim.cmd("normal! m'")
-
-	-- Emulate tag behavior by pushing to the tag stack
-	local from_pos = vim.fn.getpos(".")
-	vim.fn.settagstack(vim.fn.win_getid(), {
-		items = {
-			{
-				bufnr = vim.fn.bufnr("%"),
-				from = { from_pos[1], from_pos[2], from_pos[3] },
-				tagname = "logbook_" .. os.date("%Y%m%d_%H%M%S"),
-			},
-		},
-		type = "push",
-	})
 
 	-- Open the file in a buffer using full path
 	vim.cmd("edit " .. vim.fn.fnameescape(filename))
 
-	-- Ensure we're back in the original directory
+	-- Return to original directory at window level
 	vim.cmd("lcd " .. vim.fn.fnameescape(current_dir))
+end
+
+-- New function to open current day's logbook and set its directory
+function M.open_logbook()
+	-- Store current working directory for jumplist
+	local current_dir = vim.fn.getcwd()
+
+	-- Add current position to jumplist
+	vim.cmd("normal! m'")
+
+	-- Construct today's filename
+	local filename = os.date("%Y-%m-%d") .. config.options.file_extension
+	local full_path = config.options.default_path .. "/" .. filename
+
+	-- Create file if it doesn't exist
+	if vim.fn.filereadable(full_path) == 0 then
+		-- Ensure directory exists
+		if vim.fn.isdirectory(config.options.default_path) == 0 then
+			vim.fn.mkdir(config.options.default_path, "p")
+		end
+
+		local file = io.open(full_path, "w")
+		if file then
+			if config.options.template then
+				file:write(config.options.template)
+			else
+				file:write("# Logbook: " .. os.date("%Y-%m-%d") .. "\n\n")
+			end
+			file:close()
+		end
+	end
+
+	-- Open the file
+	vim.cmd("edit " .. vim.fn.fnameescape(full_path))
+
+	-- Set the buffer's working directory to the logbook directory
+	vim.cmd("lcd " .. vim.fn.fnameescape(config.options.default_path))
 end
 
 function M.insert_timestamp()
