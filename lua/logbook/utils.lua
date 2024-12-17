@@ -30,6 +30,9 @@ function M.open_logbook(name)
 		vim.cmd("lcd " .. vim.fn.fnameescape(current_dir))
 	end
 
+	-- Add current position to jumplist before moving
+	vim.cmd("normal! m'")
+
 	-- Open the file in a buffer using full path
 	vim.cmd("edit " .. vim.fn.fnameescape(filename))
 
