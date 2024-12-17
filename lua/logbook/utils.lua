@@ -1,3 +1,4 @@
+-- lua/logbook/utils.lua
 local config = require("logbook.config")
 
 local M = {}
@@ -30,8 +31,21 @@ function M.open_logbook(name)
 		vim.cmd("lcd " .. vim.fn.fnameescape(current_dir))
 	end
 
-	-- Add current position to jumplist before moving
+	-- Store current position in both jumplist and tagstack
 	vim.cmd("normal! m'")
+
+	-- Emulate tag behavior by pushing to the tag stack
+	local from_pos = vim.fn.getpos(".")
+	vim.fn.settagstack(vim.fn.win_getid(), {
+		items = {
+			{
+				bufnr = vim.fn.bufnr("%"),
+				from = { from_pos[1], from_pos[2], from_pos[3] },
+				tagname = "logbook_" .. os.date("%Y%m%d_%H%M%S"),
+			},
+		},
+		type = "push",
+	})
 
 	-- Open the file in a buffer using full path
 	vim.cmd("edit " .. vim.fn.fnameescape(filename))
