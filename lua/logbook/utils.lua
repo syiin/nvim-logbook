@@ -2,30 +2,59 @@ local config = require("logbook.config")
 
 local M = {}
 
-function M.quick_logbook(name)
+-- Helper function to get current ISO week number and year
+local function get_current_week()
+	return os.date(config.options.weekly_format)
+end
+
+-- Helper function to create file with template
+local function create_file_with_template(filename, mode, date_str)
+	local file = io.open(filename, "w")
+	if file then
+		local template = config.options.templates[mode]
+		if template then
+			if date_str then
+				file:write(string.format(template, date_str))
+			else
+				file:write(template)
+			end
+		end
+		file:close()
+	end
+end
+
+function M.quick_logbook(name, mode)
 	-- Store current working directory
 	local current_dir = vim.fn.getcwd()
+	mode = mode or config.options.mode
 
 	local filename
-	if name and name ~= "" then
-		filename = config.options.default_path .. "/" .. name .. config.options.file_extension
-	else
-		filename = config.options.default_path .. "/" .. os.date("%Y-%m-%d") .. config.options.file_extension
+	if mode == "scratchpad" then
+		filename = config.options.default_path .. "/" .. config.options.scratchpad_name .. config.options.file_extension
+	elseif mode == "weekly" then
+		local week = get_current_week()
+		filename = config.options.default_path .. "/" .. week .. config.options.file_extension
+	else -- daily mode
+		if name and name ~= "" then
+			filename = config.options.default_path .. "/" .. name .. config.options.file_extension
+		else
+			filename = config.options.default_path .. "/" .. os.date("%Y-%m-%d") .. config.options.file_extension
+		end
 	end
 
 	-- Create file if it doesn't exist
 	if vim.fn.filereadable(filename) == 0 then
 		-- Temporarily change directory to create the file
 		vim.cmd("lcd " .. vim.fn.fnameescape(config.options.default_path))
-		local file = io.open(filename, "w")
-		if file then
-			if config.options.template then
-				file:write(config.options.template)
-			else
-				file:write("# Logbook: " .. vim.fn.fnamemodify(filename, ":t:r") .. "\n\n")
-			end
-			file:close()
+
+		local date_str
+		if mode == "daily" then
+			date_str = os.date("%Y-%m-%d")
+		elseif mode == "weekly" then
+			date_str = get_current_week()
 		end
+
+		create_file_with_template(filename, mode, date_str)
 	end
 
 	-- Add current position to jumplist before moving
@@ -38,7 +67,6 @@ function M.quick_logbook(name)
 	vim.cmd("lcd " .. vim.fn.fnameescape(current_dir))
 end
 
--- New function to open current day's logbook and set its directory
 function M.open_logbook()
 	-- Store current working directory for jumplist
 	local current_dir = vim.fn.getcwd()
@@ -46,8 +74,18 @@ function M.open_logbook()
 	-- Add current position to jumplist
 	vim.cmd("normal! m'")
 
-	-- Construct today's filename
-	local filename = os.date("%Y-%m-%d") .. config.options.file_extension
+	local filename, date_str
+	if config.options.mode == "scratchpad" then
+		filename = config.options.scratchpad_name .. config.options.file_extension
+		date_str = nil
+	elseif config.options.mode == "weekly" then
+		date_str = get_current_week()
+		filename = date_str .. config.options.file_extension
+	else -- daily mode
+		date_str = os.date("%Y-%m-%d")
+		filename = date_str .. config.options.file_extension
+	end
+
 	local full_path = config.options.default_path .. "/" .. filename
 
 	-- Create file if it doesn't exist
@@ -57,15 +95,7 @@ function M.open_logbook()
 			vim.fn.mkdir(config.options.default_path, "p")
 		end
 
-		local file = io.open(full_path, "w")
-		if file then
-			if config.options.template then
-				file:write(config.options.template)
-			else
-				file:write("# Logbook: " .. os.date("%Y-%m-%d") .. "\n\n")
-			end
-			file:close()
-		end
+		create_file_with_template(full_path, config.options.mode, date_str)
 	end
 
 	-- Open the file
@@ -75,6 +105,7 @@ function M.open_logbook()
 	vim.cmd("lcd " .. vim.fn.fnameescape(config.options.default_path))
 end
 
+-- Other existing functions remain the same
 function M.insert_timestamp()
 	local timestamp = os.date(config.options.date_format)
 	local pos = vim.api.nvim_win_get_cursor(0)

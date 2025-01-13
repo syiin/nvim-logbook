@@ -24,6 +24,14 @@ M.defaults = {
 	file_extension = ".md",
 	use_default_keymaps = true,
 	template = nil,
+	mode = "daily", -- can be "daily", "weekly", or "scratchpad"
+	scratchpad_name = "notes", -- name of the scratchpad file
+	weekly_format = "%Y-W%V", -- ISO week number format
+	templates = {
+		daily = "# Daily Log: %s\n\n", -- %s will be replaced with date
+		weekly = "# Weekly Log: %s\n\n", -- %s will be replaced with week number
+		scratchpad = "# Scratchpad Notes\n\n", -- static template for scratchpad
+	},
 }
 
 M.options = {}
@@ -32,6 +40,11 @@ function M.setup(opts)
 	-- If user provides a path, normalize it
 	if opts and opts.default_path then
 		opts.default_path = normalize_path(opts.default_path)
+	end
+
+	-- Merge templates if provided
+	if opts and opts.templates then
+		opts.templates = vim.tbl_deep_extend("force", M.defaults.templates, opts.templates)
 	end
 
 	M.options = vim.tbl_deep_extend("force", M.defaults, opts or {})
